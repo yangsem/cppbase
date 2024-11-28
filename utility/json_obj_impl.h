@@ -73,15 +73,21 @@ public:
 private:
     bool IsNullChar(char ch);
     bool IsNumChar(char ch);
-    int32_t ParseNumber(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj);
-    int32_t ParseString(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj);
-    int32_t ParseKeyValue(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj);
-    int32_t ParseObject(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj);
-    int32_t ParseArray(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj);
+    bool IsCharZero2Nine(char ch);
+    const char *ParseString(const char *lpContent, uint64_t &uIndex);
+    const char *ParseNumber(const char *lpContent, uint64_t &uIndex, bool &bDouble);
+    int32_t ParseArrNull(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseArrBool(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseArrNumber(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseArrString(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseArrNumber(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseKeyValue(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseObject(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
+    int32_t ParseArray(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseContent(const char *lpContent);
 
 private:
-    ObjType m_eType{ObjType::Object};
+    ObjType m_eType{ObjType::Unknow};
     ValueType m_unValue;
 };
 

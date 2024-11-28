@@ -1,7 +1,23 @@
 #include "json_obj_impl.h"
 #include <error_no.h>
 
-namespace cppbase
+#define __JSON_DEBUG__
+#ifndef __JSON_DEBUG__
+#define RETURN(iErrorNo) \
+    do                   \
+    {                    \
+        return iErrorNo; \
+    } while (0)
+#else
+#define RETURN(iErrorNo)                             \
+    do                                               \
+    {                                                \
+        PRINT_ERROR("Error Occurred: %d", iErrorNo); \
+        abort();                                     \
+    } while (0)
+#endif
+
+    namespace cppbase
 {
 
 CJsonObjImpl::CJsonObjImpl()
@@ -77,6 +93,11 @@ CJsonObjImpl::~CJsonObjImpl()
 
 int32_t CJsonObjImpl::Init(ObjType eType)
 {
+    if (m_eType != ObjType::Unknow)
+    {
+        RETURN(InvaliadCall);
+    }
+
     switch (eType)
     {
         case ObjType::Array:
@@ -88,7 +109,7 @@ int32_t CJsonObjImpl::Init(ObjType eType)
             break;
 
         default:
-            return InvaliadParam;
+            RETURN(InvaliadParam);
     }
 
     m_eType = eType;
@@ -104,7 +125,7 @@ int32_t CJsonObjImpl::AddNull(const char *lpKey)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                return InvaliadParam;
+                RETURN(InvaliadParam);
             }
 
             new (&pair.first->second) CJsonObjImpl(ObjType::Null);
@@ -117,7 +138,7 @@ int32_t CJsonObjImpl::AddNull(const char *lpKey)
     }
     catch(...)
     {
-        return MallocFailed;
+        RETURN(MallocFailed);
     }
 
     return 0;
@@ -132,7 +153,7 @@ int32_t CJsonObjImpl::AddBool(const char *lpKey, bool bValue)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                return InvaliadParam;
+                RETURN(InvaliadParam);
             }
 
             new (&pair.first->second) CJsonObjImpl(ObjType::Boolean, &bValue);
@@ -145,7 +166,7 @@ int32_t CJsonObjImpl::AddBool(const char *lpKey, bool bValue)
     }
     catch(...)
     {
-        return MallocFailed;
+        RETURN(MallocFailed);
     }
 
     return 0;
@@ -160,7 +181,7 @@ int32_t CJsonObjImpl::AddInt(const char *lpKey, int64_t nValue)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                return InvaliadParam;
+                RETURN(InvaliadParam);
             }
 
             new (&pair.first->second) CJsonObjImpl(ObjType::Integer, &nValue);
@@ -173,7 +194,7 @@ int32_t CJsonObjImpl::AddInt(const char *lpKey, int64_t nValue)
     }
     catch(...)
     {
-        return MallocFailed;
+        RETURN(MallocFailed);
     }
 
     return 0;
@@ -188,7 +209,7 @@ int32_t CJsonObjImpl::AddDouble(const char *lpKey, double dValue)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                return InvaliadParam;
+                RETURN(InvaliadParam);
             }
 
             new (&pair.first->second) CJsonObjImpl(ObjType::Double, &dValue);
@@ -201,7 +222,7 @@ int32_t CJsonObjImpl::AddDouble(const char *lpKey, double dValue)
     }
     catch(...)
     {
-        return MallocFailed;
+        RETURN(MallocFailed);
     }
 
     return 0;
@@ -216,7 +237,7 @@ int32_t CJsonObjImpl::AddString(const char *lpKey, const char *lpValue)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                return InvaliadParam;
+                RETURN(InvaliadParam);
             }
 
             new (&pair.first->second) CJsonObjImpl(ObjType::String, &lpValue);
@@ -229,7 +250,7 @@ int32_t CJsonObjImpl::AddString(const char *lpKey, const char *lpValue)
     }
     catch(...)
     {
-        return MallocFailed;
+        RETURN(MallocFailed);
     }
 
     return 0;
@@ -526,7 +547,7 @@ int32_t CJsonObjImpl::GetItem(uint32_t uIndex, KvItem *lpKvItem)
 {
     if (unlikely(m_eType != ObjType::Object || uIndex >= m_unValue.objValue.size()))
     {
-        return InvaliadParam;
+        RETURN(InvaliadParam);
     }
 
     uint32_t begin = 0;
@@ -560,7 +581,7 @@ int32_t CJsonObjImpl::GetItem(uint32_t uIndex, KvItem *lpKvItem)
                     lpKvItem->lpArray = lpObj;
 
                 default:
-                    return InvaliadCall;
+                    RETURN(InvaliadCall);
             }
 
             return 0;
@@ -568,7 +589,7 @@ int32_t CJsonObjImpl::GetItem(uint32_t uIndex, KvItem *lpKvItem)
         begin++;
     }
 
-    return InvaliadParam;
+    RETURN(InvaliadParam);
 }
 
 bool CJsonObjImpl::IsNullChar(char ch)
@@ -581,7 +602,345 @@ bool CJsonObjImpl::IsNumChar(char ch)
     return (ch >= '0' && ch <= '9') || ch == '-' || ch == '.';
 }
 
-int32_t CJsonObjImpl::ParseArray(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj)
+bool CJsonObjImpl::IsCharZero2Nine(char ch)
+{
+    return (ch >= '0' && ch <= '9');
+}
+
+const char  *CJsonObjImpl::ParseString(const char *lpContent, uint64_t &uIndex)
+{
+    uIndex++; // '"'
+    char pre = '\0';
+    for (; lpContent[uIndex] != '\0'; uIndex++)
+    {
+        if (lpContent[uIndex] == '"' && pre != '\\')
+        {
+            return &lpContent[uIndex++];
+        }
+    }
+
+    return nullptr;
+}
+
+const char *CJsonObjImpl::ParseNumber(const char *lpContent, uint64_t &uIndex, bool &bDouble)
+{
+    if (unlikely(lpContent[uIndex] == '.'))
+    {
+        return nullptr;
+    }
+
+    if (lpContent[uIndex] == '-')
+    {
+        uIndex++;
+    }
+
+    bDouble = false;
+    for (; lpContent[uIndex] != '\0'; uIndex++)
+    {
+        if (lpContent[uIndex] == '.' && IsCharZero2Nine(lpContent[uIndex + 1]))
+        {
+            bDouble = true;
+            continue;
+        }
+
+        if (!IsCharZero2Nine(lpContent[uIndex]))
+        {
+            return &lpContent[uIndex++];
+        }
+    }
+}
+
+int32_t CJsonObjImpl::ParseKeyValue(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
+{
+    try
+    {
+        // "xxx": xxxx ,
+
+        // parse key
+        auto lpKeyBeing = &lpContent[uIndex + 1];
+        auto lpKeyEnd = ParseString(lpContent, uIndex);
+        if (lpKeyEnd == nullptr)
+        {
+            RETURN(ParseDataFialed);
+        }
+        std::string strKey(lpKeyBeing, lpKeyEnd);
+
+        while (IsNullChar(lpContent[uIndex++]));
+        if (lpContent[uIndex] != ':')
+        {
+            RETURN(ParseDataFialed);
+        }
+
+        // parse value
+        while (IsNullChar(lpContent[uIndex++]));
+        auto ch = lpContent[uIndex];
+        if (ch == '{')
+        {
+            auto lpObj = lpJsonObj->AddObject(strKey.c_str());
+            if (lpObj == nullptr)
+            {
+                RETURN(MallocFailed);
+            }
+            if (ParseObject(lpContent, uIndex, lpObj) != 0)
+            {
+                RETURN(ParseDataFialed);
+            }
+        }
+        else if (ch == '[')
+        {
+            auto lpObj = lpJsonObj->AddArray(strKey.c_str());
+            if (lpObj == nullptr)
+            {
+                RETURN(MallocFailed);
+            }
+            if (ParseArray(lpContent, uIndex, lpObj) != 0)
+            {
+                RETURN(ParseDataFialed);
+            }
+        }
+        else if (ch == '"')
+        {
+            auto lpStrValueBegin = &lpContent[uIndex + 1];
+            auto lpStrValueEnd = ParseString(lpContent, uIndex);
+            std::string strValue(lpStrValueBegin, lpStrValueEnd);
+            if (lpJsonObj->AddString(strKey.c_str(), strValue.c_str()) != 0)
+            {
+                RETURN(MallocFailed);
+            }
+        }
+        else if (IsNumChar(ch))
+        {
+            bool bDouble = false;
+            auto lpNumBegin = &lpContent[uIndex];
+            auto lpNumEnd = ParseNumber(lpContent, uIndex, bDouble);
+            if (lpNumEnd == nullptr)
+            {
+                RETURN(ParseDataFialed);
+            }
+            std::string strNum(lpNumBegin, lpNumEnd);
+            if (bDouble)
+            {
+                auto dValue = std::atof(strNum.c_str());
+                if (lpJsonObj->AddDouble(strKey.c_str(), dValue) != 0)
+                {
+                    RETURN(MallocFailed);
+                }
+            }
+            else
+            {
+                int64_t nValue = std::atoll(strNum.c_str());
+                if (lpJsonObj->AddInt(strKey.c_str(), nValue) != 0)
+                {
+                    RETURN(MallocFailed);
+                }
+            }
+        }
+        else if (ch == 't' || ch == 'f') // true or false
+        {
+            if (lpContent[uIndex] == '\0' || lpContent[uIndex + 1] != '\0'
+                || lpContent[uIndex + 2] == '\0' || lpContent[uIndex + 3] == '\0')
+            {
+                RETURN(ParseDataFialed);
+            }
+
+            auto bValue = true;
+            if (*(uint32_t *)&lpContent[uIndex] == *(const uint32_t *)"true")
+            {
+                if (lpJsonObj->AddBool(strKey.c_str(), true) != 0)
+                {
+                    RETURN(MallocFailed);
+                }
+            }
+            else if (strncmp(&lpContent[uIndex], "false", 5) == 0)
+            {
+                if (lpJsonObj->AddBool(strKey.c_str(), false) != 0)
+                {
+                    RETURN(MallocFailed);
+                }
+            }
+            else
+            {
+                RETURN(ParseDataFialed);
+            }
+        }
+        else if (ch == 'n') // null
+        {
+            if (*(uint32_t *)&lpContent[uIndex] == *(const uint32_t *)"null")
+            {
+                if (lpJsonObj->AddNull(strKey.c_str()) != 0)
+                {
+                    RETURN(MallocFailed);
+                }
+            }
+        }
+        else
+        {
+            RETURN(ParseDataFialed);
+        }
+    }
+    catch(...)
+    {
+        RETURN(MallocFailed);
+    }
+
+    while (IsNullChar(lpContent[uIndex++]));
+    if (lpContent[uIndex] == ',')
+    {
+        uIndex++;
+    }
+    while (IsNullChar(lpContent[uIndex++]));
+
+    if (lpContent[uIndex] != '}' || lpContent[uIndex] != ']')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    return 0;
+}
+
+int32_t CJsonObjImpl::ParseArrNull(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
+{
+    if (*(uint32_t *)&lpContent[uIndex] == *(const uint32_t *)"null")
+    {
+        if (lpJsonObj->AddNull(nullptr) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+
+    while (IsNullChar(lpContent[uIndex++]));
+    if (lpContent[uIndex] == ',')
+    {
+        uIndex++;
+    }
+    while (IsNullChar(lpContent[uIndex++]));
+
+    if (lpContent[uIndex] != ']')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    return 0;
+}
+
+int32_t CJsonObjImpl::ParseArrBool(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
+{
+    if (lpContent[uIndex] == '\0' || lpContent[uIndex + 1] != '\0'
+        || lpContent[uIndex + 2] == '\0' || lpContent[uIndex + 3] == '\0')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    auto bValue = true;
+    if (*(uint32_t *)&lpContent[uIndex] == *(const uint32_t *)"true")
+    {
+        if (lpJsonObj->AddBool(nullptr, true) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+    else if (strncmp(&lpContent[uIndex], "false", 5) == 0)
+    {
+        if (lpJsonObj->AddBool(nullptr, false) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+    else
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    while (IsNullChar(lpContent[uIndex++]));
+    if (lpContent[uIndex] == ',')
+    {
+        uIndex++;
+    }
+    while (IsNullChar(lpContent[uIndex++]));
+
+    if (lpContent[uIndex] != ']')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    return 0;
+}
+
+int32_t CJsonObjImpl::ParseArrNumber(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
+{
+    bool bDouble = false;
+    auto lpNumBegin = &lpContent[uIndex];
+    auto lpNumEnd = ParseNumber(lpContent, uIndex, bDouble);
+    if (lpNumEnd == nullptr)
+    {
+        RETURN(ParseDataFialed);
+    }
+    std::string strNum(lpNumBegin, lpNumEnd);
+    if (bDouble)
+    {
+        auto dValue = std::atof(strNum.c_str());
+        if (lpJsonObj->AddDouble(nullptr, dValue) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+    else
+    {
+        int64_t nValue = std::atoll(strNum.c_str());
+        if (lpJsonObj->AddInt(nullptr, nValue) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+
+    while (IsNullChar(lpContent[uIndex++]));
+    if (lpContent[uIndex] == ',')
+    {
+        uIndex++;
+    }
+    while (IsNullChar(lpContent[uIndex++]));
+
+    if (lpContent[uIndex] != ']')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    return 0;
+}
+
+int32_t CJsonObjImpl::ParseArrString(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
+{
+    try
+    {
+        auto lpStrValueBegin = &lpContent[uIndex + 1];
+        auto lpStrValueEnd = ParseString(lpContent, uIndex);
+        std::string strValue(lpStrValueBegin, lpStrValueEnd);
+        if (lpJsonObj->AddString(nullptr, strValue.c_str()) != 0)
+        {
+            RETURN(MallocFailed);
+        }
+    }
+    catch(...)
+    {
+        RETURN(MallocFailed);
+    }
+
+    while (IsNullChar(lpContent[uIndex++]));
+    if (lpContent[uIndex] == ',')
+    {
+        uIndex++;
+    }
+    while (IsNullChar(lpContent[uIndex++]));
+
+    if (lpContent[uIndex] != ']')
+    {
+        RETURN(ParseDataFialed);
+    }
+
+    return 0;
+}
+
+int32_t CJsonObjImpl::ParseArray(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
 {
     // "[......]"
     uIndex++; // '['
@@ -592,34 +951,48 @@ int32_t CJsonObjImpl::ParseArray(const char *lpContent, uint64_t &uIndex, CJsonO
         {
             continue;
         }
+        else if (ch == 'n') // null
+        {
+            if (ParseArrNull(lpContent, uIndex, lpJsonObj) != 0)
+            {
+                RETURN(ParseDataFialed);
+            }
+        }
+        else if (ch == 't' || ch == 'f') // true or false
+        {
+            if (ParseArrBool(lpContent, uIndex, lpJsonObj) != 0)
+            {
+                RETURN(ParseDataFialed);
+            }
+        }
         else if (ch == '"')
         {
-            if (ParseString(lpContent, uIndex, lpJsonObj) != 0)
+            if (ParseArrString(lpContent, uIndex, lpJsonObj) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (IsNumChar(ch))
         {
-            if (ParseNumber(lpContent, uIndex, lpJsonObj) != 0)
+            if (ParseArrNumber(lpContent, uIndex, lpJsonObj) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (ch == '[')
         {
-            auto lpArray = (CJsonObjImpl *)lpJsonObj->AddArray(nullptr);
+            auto lpArray = lpJsonObj->AddArray(nullptr);
             if (ParseArray(lpContent, uIndex, lpArray) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (ch == '{')
         {
-            auto lpObj = (CJsonObjImpl *)lpJsonObj->AddObject(nullptr);
+            auto lpObj = lpJsonObj->AddObject(nullptr);
             if (ParseObject(lpContent, uIndex, lpObj) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (ch == ']')
@@ -629,14 +1002,14 @@ int32_t CJsonObjImpl::ParseArray(const char *lpContent, uint64_t &uIndex, CJsonO
         }
         else
         {
-            return ParseDataFialed;
+            RETURN(ParseDataFialed);
         }
     }
 
     return 0;
 }
 
-int32_t CJsonObjImpl::ParseObject(const char *lpContent, uint64_t &uIndex, CJsonObjImpl *lpJsonObj)
+int32_t CJsonObjImpl::ParseObject(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
 {
     // "{......}"
     uIndex++; // '{'
@@ -651,7 +1024,7 @@ int32_t CJsonObjImpl::ParseObject(const char *lpContent, uint64_t &uIndex, CJson
         {
             if (ParseKeyValue(lpContent, uIndex, lpJsonObj) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (ch == '}')
@@ -661,7 +1034,7 @@ int32_t CJsonObjImpl::ParseObject(const char *lpContent, uint64_t &uIndex, CJson
         }
         else
         {
-            return ParseDataFialed;
+            RETURN(ParseDataFialed);
         }
     }
 
@@ -682,19 +1055,19 @@ int32_t CJsonObjImpl::ParseContent(const char *lpContent)
         {
             if (ParseObject(lpContent, uIndex, this) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else if (lpContent[uIndex] == '[')
         {
             if (ParseArray(lpContent, uIndex, this) != 0)
             {
-                return ParseDataFialed;
+                RETURN(ParseDataFialed);
             }
         }
         else
         {
-            return ParseDataFialed;
+            RETURN(ParseDataFialed);
         }
     }
 
@@ -705,13 +1078,13 @@ int32_t CJsonObjImpl::OpenFromFile(const char *lpFile)
 {
     if (unlikely(lpFile == nullptr))
     {
-        return InvaliadParam;
+        RETURN(InvaliadParam);
     }
 
     auto lpHandler = fopen(lpFile, "r");
     if (lpHandler == nullptr)
     {
-        return OpenFileFailed;
+        RETURN(OpenFileFailed);
     }
 
     int32_t iErrorNo = 0;
@@ -726,14 +1099,14 @@ int32_t CJsonObjImpl::OpenFromFile(const char *lpFile)
     }
 
     fclose(lpHandler);
-    return iErrorNo;
+    RETURN(iErrorNo);
 }
 
 int32_t CJsonObjImpl::OpenFromBuffer(const char *lpBuffer)
 {
     if (unlikely(lpBuffer == nullptr))
     {
-        return InvaliadParam;
+        RETURN(InvaliadParam);
     }
 
     return ParseContent(lpBuffer);
