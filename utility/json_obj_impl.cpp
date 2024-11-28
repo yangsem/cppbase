@@ -648,6 +648,8 @@ const char *CJsonObjImpl::ParseNumber(const char *lpContent, uint64_t &uIndex, b
             return &lpContent[uIndex++];
         }
     }
+
+    return nullptr;
 }
 
 int32_t CJsonObjImpl::ParseKeyValue(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj)
@@ -1114,7 +1116,7 @@ int32_t CJsonObjImpl::OpenFromBuffer(const char *lpBuffer)
 
 const char *CJsonObjImpl::GetJsonStr(bool bPretty)
 {
-
+    return nullptr;
 }
 
 }

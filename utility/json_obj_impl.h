@@ -13,7 +13,7 @@ class CJsonObjImpl : public IJsonObj
 {
     struct _ValueType
     {
-        uint8_t Reserve[64];
+        uint8_t Reserve[72];
     };
 
     using KeyType = std::string;
@@ -80,7 +80,6 @@ private:
     int32_t ParseArrBool(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseArrNumber(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseArrString(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
-    int32_t ParseArrNumber(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseKeyValue(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseObject(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
     int32_t ParseArray(const char *lpContent, uint64_t &uIndex, IJsonObj *lpJsonObj);
