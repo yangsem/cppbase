@@ -135,6 +135,10 @@ int32_t CJsonObjImpl::AddNull(const char *lpKey)
             m_unValue.arrValue.emplace_back(_ValueType());
             new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Null);
         }
+        else
+        {
+            RETURN(InvaliadCall);
+        }
     }
     catch(...)
     {
@@ -162,6 +166,10 @@ int32_t CJsonObjImpl::AddBool(const char *lpKey, bool bValue)
         {
             m_unValue.arrValue.emplace_back(_ValueType());
             new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Boolean, &bValue);
+        }
+        else
+        {
+            RETURN(InvaliadCall);
         }
     }
     catch(...)
@@ -191,6 +199,10 @@ int32_t CJsonObjImpl::AddInt(const char *lpKey, int64_t nValue)
             m_unValue.arrValue.emplace_back(_ValueType());
             new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Integer, &nValue);
         }
+        else
+        {
+            RETURN(InvaliadCall);
+        }
     }
     catch(...)
     {
@@ -218,6 +230,10 @@ int32_t CJsonObjImpl::AddDouble(const char *lpKey, double dValue)
         {
             m_unValue.arrValue.emplace_back(_ValueType());
             new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Double, &dValue);
+        }
+        else
+        {
+            RETURN(InvaliadCall);
         }
     }
     catch(...)
@@ -247,6 +263,10 @@ int32_t CJsonObjImpl::AddString(const char *lpKey, const char *lpValue)
             m_unValue.arrValue.emplace_back(_ValueType());
             new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::String, &lpValue);
         }
+        else
+        {
+            RETURN(InvaliadCall);
+        }
     }
     catch(...)
     {
@@ -273,6 +293,10 @@ IJsonObj *CJsonObjImpl::AddArray(const char *lpKey)
             m_unValue.arrValue.emplace_back(_ValueType());
             return new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Array);
         }
+        else
+        {
+            RETURN(InvaliadCall);
+        }
     }
     catch(...)
     {
@@ -297,6 +321,10 @@ IJsonObj *CJsonObjImpl::AddObject(const char *lpKey)
         {
             m_unValue.arrValue.emplace_back(_ValueType());
             return new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Object);
+        }
+        else
+        {
+            RETURN(InvaliadCall);
         }
     }
     catch(...)
