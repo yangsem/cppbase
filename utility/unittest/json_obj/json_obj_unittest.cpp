@@ -1,7 +1,17 @@
-#include <json_obj.h>
+#include <gtest/gtest.h>
 
-int main(int argc, const char *argv[])
+int add(int a, int b)
 {
-    printf("Hello, world\n");
-    return 0;
+    return a + b;
+}
+
+TEST(testCase, test0)
+{
+    EXPECT_EQ(add(2, 3), 5);
+}
+
+int main(int argc, char **argv)
+{
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

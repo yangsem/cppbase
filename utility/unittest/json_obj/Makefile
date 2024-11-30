@@ -16,7 +16,7 @@
 
 #-----------------------------------------------------------------------------------------------------#
 # User configurable variables
-#
+ARCH := $(shell uname -m)
 # ====================================================================================================
 # GNU_TOOLCHAIN_PREFIX:   The perfix of gnu toolchain.
 # ====================================================================================================
@@ -28,7 +28,7 @@ DEFINES :=
 EXTRA_CFLAGS := -O0 -g -std=c++11 -fPIC -fvisibility=hidden
 # inc-y:          Header include paths.
 #                 头文件搜索目录
-inc-y := ./ ../../../include
+inc-y := ./ ../../../3rd/googletest/include ../../../include
 # src-y:          Sources. The items ending with a trailing / are regarded as directories, the others
 #                 are regareded as files. The files with specified suffixes in those directories will
 #                 be automatically involved in compilation.
@@ -52,7 +52,7 @@ OBJECT_DIR := build
 LD_SCRIPT := 
 # LIBS:           The libraries for linking.
 #                 连接时需要的lib文件
-LIBS :=  -lpthread -lrt -L ../../../bin -lcbutil
+LIBS :=  -lpthread -lrt -L ../../../3rd/googletest/lib/$(ARCH)/ -lgtest -L ../../../bin -lcbutil
 # LDFLAGS:        All other linker flags.
 #                 连接参数
 LDFLAGS := 
