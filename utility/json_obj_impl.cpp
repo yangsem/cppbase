@@ -24,7 +24,7 @@ CJsonObjImpl::CJsonObjImpl()
 {
 }
 
-CJsonObjImpl::CJsonObjImpl(ObjType eType, const void *lpValue = nullptr)
+CJsonObjImpl::CJsonObjImpl(ObjType eType, const void *lpValue)
 {
     switch (eType)
     {
@@ -52,9 +52,11 @@ CJsonObjImpl::CJsonObjImpl(ObjType eType, const void *lpValue = nullptr)
             break;
 
         case ObjType::Object:
-        default:
             new(&m_unValue) ObjValueType;
             break;
+
+        default:
+            throw std::runtime_error("invalid type");
     }
 
     m_eType = eType;
@@ -116,7 +118,7 @@ int32_t CJsonObjImpl::Init(ObjType eType)
     return 0;
 }
 
-int32_t CJsonObjImpl::AddNull(const char *lpKey)
+IJsonObj *CJsonObjImpl::AddValue(const char *lpKey, ObjType eType, const void *lpValue)
 {
     try
     {
@@ -125,213 +127,86 @@ int32_t CJsonObjImpl::AddNull(const char *lpKey)
             auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
             if (unlikely(!pair.second))
             {
-                RETURN(InvaliadParam);
+                return nullptr;
             }
 
-            new (&pair.first->second) CJsonObjImpl(ObjType::Null);
+            return new(&pair.first->second) CJsonObjImpl(eType, lpValue);
         }
         else if (m_eType == ObjType::Array && lpKey == nullptr)
         {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Null);
+            m_unValue.arrValue.push_back(_ValueType());
+            return new(&m_unValue.arrValue.back()) CJsonObjImpl(eType, lpValue);
         }
         else
         {
-            RETURN(InvaliadCall);
+            return nullptr;
         }
     }
     catch(...)
     {
-        RETURN(MallocFailed);
     }
 
-    return 0;
+    return nullptr;
+}
+
+int32_t CJsonObjImpl::AddNull(const char *lpKey)
+{
+    if (likely(AddValue(lpKey, ObjType::Null) != nullptr))
+    {
+        return 0;
+    }
+
+    return InvaliadCall;
 }
 
 int32_t CJsonObjImpl::AddBool(const char *lpKey, bool bValue)
 {
-    try
+    if (likely(AddValue(lpKey, ObjType::Boolean, &bValue) != nullptr))
     {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(!pair.second))
-            {
-                RETURN(InvaliadParam);
-            }
-
-            new (&pair.first->second) CJsonObjImpl(ObjType::Boolean, &bValue);
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Boolean, &bValue);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-        RETURN(MallocFailed);
+        return 0;
     }
 
-    return 0;
+    return InvaliadCall;
 }
 
 int32_t CJsonObjImpl::AddInt(const char *lpKey, int64_t nValue)
 {
-    try
+    if (likely(AddValue(lpKey, ObjType::Integer, &nValue) != nullptr))
     {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(!pair.second))
-            {
-                RETURN(InvaliadParam);
-            }
-
-            new (&pair.first->second) CJsonObjImpl(ObjType::Integer, &nValue);
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Integer, &nValue);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-        RETURN(MallocFailed);
+        return 0;
     }
 
-    return 0;
+    return InvaliadCall;
 }
 
 int32_t CJsonObjImpl::AddDouble(const char *lpKey, double dValue)
 {
-    try
+    if (likely(AddValue(lpKey, ObjType::Double, &dValue) != nullptr))
     {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(!pair.second))
-            {
-                RETURN(InvaliadParam);
-            }
-
-            new (&pair.first->second) CJsonObjImpl(ObjType::Double, &dValue);
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Double, &dValue);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-        RETURN(MallocFailed);
+        return 0;
     }
 
-    return 0;
+    return InvaliadCall;
 }
 
 int32_t CJsonObjImpl::AddString(const char *lpKey, const char *lpValue)
 {
-    try
+    if (likely(AddValue(lpKey, ObjType::String, lpValue) != nullptr))
     {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(!pair.second))
-            {
-                RETURN(InvaliadParam);
-            }
-
-            new (&pair.first->second) CJsonObjImpl(ObjType::String, &lpValue);
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::String, &lpValue);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-        RETURN(MallocFailed);
+        return 0;
     }
 
-    return 0;
+    return InvaliadCall;
 }
 
 IJsonObj *CJsonObjImpl::AddArray(const char *lpKey)
 {
-    try
-    {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(pair.second))
-            {
-                return new (&pair.first->second) CJsonObjImpl(ObjType::Array);
-            }
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            return new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Array);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-    }
-
-    return nullptr;
+    return AddValue(lpKey, ObjType::Array);
 }
 
 IJsonObj *CJsonObjImpl::AddObject(const char *lpKey)
 {
-    try
-    {
-        if (m_eType == ObjType::Object && lpKey != nullptr)
-        {
-            auto pair = m_unValue.objValue.emplace(lpKey, _ValueType());
-            if (unlikely(pair.second))
-            {
-                return new (&pair.first->second) CJsonObjImpl(ObjType::Object);
-            }
-        }
-        else if (m_eType == ObjType::Array && lpKey == nullptr)
-        {
-            m_unValue.arrValue.emplace_back(_ValueType());
-            return new (&m_unValue.arrValue.back()) CJsonObjImpl(ObjType::Object);
-        }
-        else
-        {
-            RETURN(InvaliadCall);
-        }
-    }
-    catch(...)
-    {
-    }
-
-    return nullptr;
+    return AddValue(lpKey, ObjType::Object);
 }
 
 bool CJsonObjImpl::GetNull(const char *lpKey)

@@ -36,7 +36,7 @@ class CJsonObjImpl : public IJsonObj
 
 public:
     CJsonObjImpl();
-    CJsonObjImpl(ObjType eType, const void *lpValue);
+    CJsonObjImpl(ObjType eType, const void *lpValue = nullptr);
     ~CJsonObjImpl() override;
 
     int32_t Init(ObjType eType) override;
@@ -71,6 +71,8 @@ public:
     const char *GetJsonStr(bool bPretty) override;
 
 private:
+    IJsonObj *AddValue(const char *lpKey, ObjType eType, const void *lpValue = nullptr);
+
     bool IsNullChar(char ch);
     bool IsNumChar(char ch);
     bool IsCharZero2Nine(char ch);
